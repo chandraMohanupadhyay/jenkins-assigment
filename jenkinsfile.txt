@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+
+    environment {
+        CACHE_DIR = 'cache'
+        APP_NAME  = 'my-app'
+        BUILD_ENV = 'dev'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+
+        stage('Prepare Dependencies (Cache)') {
+            when {
+                not {
+                    expression { fileExists("${CACHE_DIR}/dependencies.txt") }
+                }
+            }
+            steps {
+                echo 'Cache not found. Creating dependencies cache...'
+                sh '''
+                    mkdir -p cache
+                    echo "java=17" > cache/dependencies.txt
+                    echo "maven=3.9" >> cache/dependencies.txt
+                '''
+            }
+        }
+
+        stage('Use Cached Dependencies') {
+            when {
+                expression { fileExists("${CACHE_DIR}/dependencies.txt") }
+            }
+            steps {
+                echo 'Using cached dependencies:'
+                sh 'cat cache/dependencies.txt'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building ${APP_NAME} in ${BUILD_ENV} environment"
+                sh 'echo Build successful'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                retry(2) {
+                    echo 'Running tests...'
+                    sh
