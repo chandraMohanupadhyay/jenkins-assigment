@@ -3,8 +3,10 @@ pipeline {
 
     environment {
         CACHE_DIR = 'cache'
-        APP_NAME  = 'my-app'
+        APP_NAME  = 'demo-app'
         BUILD_ENV = 'dev'
+        GIT_URL   = 'https://github.com/chandraMohanupadhyay/jenkins-assigment.git'
+        BRANCH    = 'master'
     }
 
     stages {
@@ -12,14 +14,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Checking out source code...'
-                checkout scm
+                git branch: "${BRANCH}", url: "${GIT_URL}"
             }
         }
 
         stage('Prepare Dependencies (Cache)') {
             when {
-                not {
-                    expression { fileExists("${CACHE_DIR}/dependencies.txt") }
+                expression {
+                    !fileExists("${CACHE_DIR}/dependencies.txt")
                 }
             }
             steps {
@@ -34,7 +36,9 @@ pipeline {
 
         stage('Use Cached Dependencies') {
             when {
-                expression { fileExists("${CACHE_DIR}/dependencies.txt") }
+                expression {
+                    fileExists("${CACHE_DIR}/dependencies.txt")
+                }
             }
             steps {
                 echo 'Using cached dependencies:'
@@ -53,4 +57,31 @@ pipeline {
             steps {
                 retry(2) {
                     echo 'Running tests...'
-                    sh
+                    sh 'bash scripts/run-tests.sh'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo 'Deploying application...'
+                sh 'echo Deployment successful'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully'
+        }
+        failure {
+            echo 'Pipeline failed. Please check logs.'
+        }
+        always {
+            echo 'Pipeline execution finished'
+        }
+    }
+}
